@@ -22,9 +22,9 @@ def run_hdbet(input_image, output_image, device, mode="accurate"):
     assert mode in ["accurate","fast"], 'Unknown HD-BET mode. Please choose either "accurate" or "fast"'
 
     if "cpu" in str(device).lower():
-        bet_call = f"hd-bet -i {input_image} -device cpu -mode {mode} -tta 0 -o {output_image}"
+        bet_call = f"hd-bet -i {input_image} -device cpu -o {output_image}"
     else:
-        bet_call = f"hd-bet -i {input_image} -device {device} -mode accurate -tta 1 -o {output_image}"
+        bet_call = f"hd-bet -i {input_image} -device {device} -o {output_image}"
 
     subprocess.run(shlex.split(bet_call), check=True)
 
