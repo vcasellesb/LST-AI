@@ -20,7 +20,7 @@ from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
 from LST_AI.stats import compute_stats
-from LST_AI.utils import download_data
+from LST_AI.utils import maybe_download_data, MODELS_PATH
 
 if __name__ == "__main__":
 
@@ -127,8 +127,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(f"Looking for model weights in {os.path.dirname(__file__)}.")
-    download_data(path=os.path.dirname(__file__))
+    print(f"Looking for model weights in {MODELS_PATH}.")
+    maybe_download_data()
 
     # Sanity Checks
     assert os.path.exists(args.t1), 'LST.AI aborted. T1w Image Path does not exist.'
