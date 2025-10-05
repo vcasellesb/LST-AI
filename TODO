@@ -1,0 +1,11 @@
+Issues I see:
+    * Oversized docker image: run pip --no-cache-dir && apt-get --no-install-recommends
+    Reduce also the number of layers stacking RUNs together.
+
+    * Move the dirname(__file__) from `lst` binary to utils.py. Otherwise, when LST-AI is installed via pip install -e .
+    A new lst file is generated in /usr/local/bin, and thus the lst binary looks for the models in /usr/bin/local, instead
+    of the custom lst directory the user might have already installed the models in.
+
+    * HD-BET call fails because hd_bet does not accept -tta and -mode args anymore. In the Readme - Installation Instructions they mention
+    that a specific commit hash should be checked out prior to HD-BET installation, but the Dockerfile does not do it, leading the docker image
+    to fail.
