@@ -50,7 +50,9 @@ RUN git clone --depth 1 --branch v5.2.1 https://github.com/InsightSoftwareConsor
     mkdir -p build && \
     cd build && \
     cmake -DModule_ITKPNG=ON \
+          -DITK_USE_SYSTEM_PNG=ON \
           -DBUILD_TESTING=OFF \
+          -DBUILD_SHARED_LIBS=OFF \
           -DCMAKE_BUILD_TYPE=Release .. && \
     make -j ${BUILD_JOBS} && \
     make install
