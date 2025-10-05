@@ -14,9 +14,9 @@ LST-AI was collaboratively developed by the Department of Neurology and Departme
 * While LST depends on MATLAB, we offer LST-AI as a python-based tool which makes it available to the whole community.
 * We suggest using LST or LST-AI according to your type of data:
     * A 3D T1-weighted and a 3D FLAIR sequence are available: (new) LST-AI
-    * Only a 3D FLAIR sequence is available: (old) [LST](https://www.applied-statistics.de/lst.html) (LPA)
+    * Only a 3D FLAIR sequence is available: (old) [LST]((https://www.applied-statistics.de/lst.html) (LPA)
     * Only a 3D T1-weighted sequence is available: not covered by any LST(-AI) version
-    * If a 3D T1-weighted and a non-3D FLAIR sequence are available, please try both (new) LST-AI or (old) [LST](https://www.applied-statistics.de/lst.html) (LGA or LPA)
+    * If a 3D T1-weighted and a non-3D FLAIR sequence are available, please try both (new) LST-AI or (old) [LST]((https://www.applied-statistics.de/lst.html)) (LGA or LPA)
 
 
 ## Usage
@@ -66,7 +66,6 @@ cd ..
 ```bash
 git clone https://github.com/MIC-DKFZ/HD-BET
 cd HD-BET
-git checkout ae160681324d524db3578e4135bf781f8206e146
 pip install -e .
 cd ..
 ```
@@ -120,9 +119,9 @@ cd ..
 
 ### Usage of LST-AI
 
-Once installed, LST-AI can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as input and assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected.
+Once installed, lst can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as inputan d assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected.
 
-LST-AI always requires you to provide a `--t1` T1w and `--flair` FLAIR image and to specify an output path for the segmentation results `--output`. If you would like to keep all processing files, for example, the segmentations and skull-stripped images in the MNI152 space, provide a directory via `--temp`.
+LST always requires you to provide a `--t1` T1w and `--flair` FLAIR image and to specify an output path for the segmentation results `--output`. If you would like to keep all processing files, for example, the segmentations and skull-stripped images in the MNI152 space, provide a director via `--temp`.
 
 #### Example usage:
 ```
@@ -135,34 +134,41 @@ We provide three different modes:
 
 1. **Default Mode - Segmentation + Annotation**: In this mode, you only need to provide the T1w and FLAIR input images. LST-AI will automatically segment and annotate your lesions according to McDonald's criteria.
 
-2. **Segmentation Only**: If you only care about the binary segmentation, and not about the annotation/class (perventricular, ...), this mode is for you. It will (only) save the binary segmentation mask. To execute it, provide the `--segment_only` flag to run it.
+2. Segmentation Only: If you only care about the binary segmentation, and not about the annotation/class (perventricular, ...), this mode is for you. It will (only) save the binary segmentation mask. To execute it, provide the `--segmentation_only` flag to run it.
 
-3. **Annotation Only**: If you already have a satisfactory binary segmentation mask for your T1w/FLAIR images, you can only use the annotation/region labeling function. Please provide your existing segmentation via `--existing_seg /path/to/binary/mask`, and provide the `--annotate_only` flag to run it. We assume that the lesion mask is provided in the FLAIR image space.
+3. Annotation Only: If you already have a satisfactory binary segmentation mask for your T1w/FLAIR images, you can only use the annotation/region labeling function. Please provide your existing segmentation via `--existing_seg /path/to/binary/mask`, and provide the `--annotate_only` flag to run it. We assume that the lesion mask is provided in the FLAIR image space.
 
 #### Other (useful) settings
 
-- `--temp `: If you would like to access intermediate pipeline results such as the skull-stripped T1w, and FLAIR images in MNI152 space, please provide a temporary directory using this flag. Otherwise, we create a temporary directory on the fly and remove it once the pipeline has finished.
+- If you would like to access intermediate pipeline results such as the skull-stripped T1w, and FLAIR images in MNI152 space, please provide a temporary directory via `--temp `. Otherwise, we create a temporary directory on the fly and remove it once the pipeline has finished.
 - `--device`: Provide an integer value (e.g. `0`) for a GPU ID or `cpu` if you do not have access to a GPU.
 - `--stripped`: Bypass skull-stripping. Only use if your images are (actually) skull-stripped. We cannot handle a mixture (e.g. skull-stripped T1w, but non-skull-stripped FLAIR) as of now.
-- `--threshold`: Provide a value between `0` and `1` that defines the threshold which is applied to the lesion probability map generated by the ensemble network to create the binary lesion mask. The default setting is 0.5.
-- `--clipping`: This flag can be used to define lower and upper percentiles that are used as min & max for standardization of image intensities in pre-processing. Changing these parameters can have an effect on the sensitivity of the segmentation process (e.g., higher max can yield higher sensitivity). The default setting is `0.5 99.5`, which indicates that the min is defined as the 0.5 percentile and the max is defined as the 99.5 percentile.
-- `--probability_map`: Save the lesion probability maps of the ensemble network and of each individual 3D UNet model of the ensemble network. The `--temp` flag must be set, otherwise the files will be removed as they are stored in the temporary directory along with the intermediate pipeline results.  
 
 
 ### Dockerfile and Dockerhub
 
-While the installation and usage require internet access to install python packages and to download the weights and atlas, we understand that some researchers prefer to use lst-ai offline. Thus, we have decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts (for instructions please check the docker directory). If, instead of building the docker yourself, you would just rather use it, you can pull it from dockerhub instead.
-
-While we used to maintain jqmcginnis/lst-ai_cpu, we encourage everyone to use the unified jqmcginnis/lst-ai instead (CPU/GPU enabled), featuring the newest LST-AI version. 
-You can pull it from dockerhub via executing:
-
-```bash
-docker pull jqmcginnis/lst-ai:v1.2.0
-```
+While the installation and usage require internet access to install python packages and to download the weights and atlas, we understand that some researchers prefer to use lst-ai offline. Thus, we decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts.
+As CUDA version rapidly evolve, we do not provide the docker containers as independent release, but ask you to build these with the provided Dockerfiles. For the GPU container, please adjust the CUDA version according to your hardware setup.
 
 ### Running the LST-AI Docker Container
-Once you have pulled (or built) your Docker image using the Dockerfile provided you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
+Once you have built your Docker image using the Dockerfile provided (c.f. directories `cpu` or `gpu`), you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
 
+#### Build the Docker Image
+Clone the repository:
+```bash
+git clone https://github.com/CompImg/LST-AI/
+cd LST-AI
+```
+If you haven't already, build your CPU or GPU Docker image:
+
+```
+cd cpu
+docker build -t lst-ai_cpu:latest .
+```
+```
+cd gpu
+docker build -t lst-ai_gpu:latest .
+```
 #### Run the Docker Container with Bind Mounts
 The primary mechanism for sharing files between your host system and the Docker container is the `-v` or `--volume` flag, which specifies a bind mount.
 
@@ -183,23 +189,23 @@ __Note__: Ensure your paths are absolute, as Docker requires absolute paths for 
 
 We invite you to tailor LST-AI to your pipeline and application, please have a look at our [sources](LST-AI).
 
-### BIDS Compliance with LST-AI
-
-To ensure maximum flexibility for our user base, LST-AI does not natively enforce BIDS-compliant file-naming conventions. This decision allows users to work seamlessly with both BIDS and non-BIDS datasets.
-
-However, for those who wish to utilize LST-AI within a BIDS-compliant workflow, we have provided an [example repository](https://github.com/twiltgen/LST-AI_BIDS) that demonstrates the integration of LST-AI with BIDS-compliant data. This example reflects the BIDS-compliant usage of LST-AI that we are currently using in our internal database.
-
 ### Citation
 
 Please consider citing [LST-AI](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966) to support the development:
 ```
-@article{wiltgen2024lst,
-  title={LST-AI: A deep learning ensemble for accurate MS lesion segmentation},
-  author={Wiltgen, Tun and McGinnis, Julian and Schlaeger, Sarah and Kofler, Florian and Voon, CuiCi and Berthele, Achim and Bischl, Daria and Grundl, Lioba and Will, Nikolaus and Metz, Marie and others},
-  journal={NeuroImage: Clinical},
-  pages={103611},
-  year={2024},
-  publisher={Elsevier}
+@article{Wiltgen2023lst,
+  author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria
+  Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp
+  Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer
+  and Jan Kirschke and Mark Muehlau and Benedikt Wiestler},
+  title = {LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation},
+  elocation-id = {2023.11.23.23298966},
+  year = {2023},
+  doi = {10.1101/2023.11.23.23298966},
+  publisher = {Cold Spring Harbor Laboratory Press},
+  URL = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966},
+  eprint = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966.full.pdf},
+  journal = {medRxiv}
 }
 ```
 

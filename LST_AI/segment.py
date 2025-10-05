@@ -1,63 +1,15 @@
 import os
 import logging
 logging.getLogger('tensorflow').disabled = True
-import numpy as np
 import nibabel as nib
-from scipy.ndimage import label, generate_binary_structure
-
+import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
 from LST_AI.custom_tf import load_custom_model
 
 
-# stolen and adapted from SCT 6.5 math.py line 421
-def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
-    """Removes all unconnected objects smaller than the minimum specified size.
-
-    Adapted from:
-    https://github.com/ivadomed/ivadomed/blob/master/ivadomed/postprocessing.py#L327
-    and
-    https://github.com/ivadomed/ivadomed/blob/master/ivadomed/postprocessing.py#L224
-
-    Args:
-        data (ndarray): Input data.
-        dim_lst (list): Dimensions of a voxel in mm.
-        unit (str): Indicates the units of the objects: "mm3" or "vox"
-        thr (float): Minimal object size to keep in input data.
-
-    Returns:
-        ndarray: Array with small objects.
-    """
-    print(f"Thresholding lesions at [mm3]:{np.prod(dim_lst)}")
-
-    px, py, pz = dim_lst
-
-    # structuring element that defines feature connections
-    bin_structure = generate_binary_structure(3, 2)
-
-    data_label, n = label(data, structure=bin_structure)
-
-    if unit == 'mm3':
-        size_min = np.round(thr / (px * py * pz))
-    else:
-        print('Please choose a different unit for removeSmall. Choices: vox or mm3')
-        exit()
-
-    for idx in range(1, n + 1):
-        data_idx = (data_label == idx).astype(int)
-        n_nonzero = np.count_nonzero(data_idx)
-
-        if n_nonzero < size_min:
-            data[data_label == idx] = 0
-
-    return data
-
-
-
-def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, 
-                      output_prob_path, output_prob1_path, output_prob2_path, output_prob3_path, 
-                      device='cpu', probmap=False, input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5), lesion_thr=0):
+def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
     """
     Segment medical images using ensemble of U-Net models.
 
@@ -82,9 +34,6 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         Segmentation threshold to determine the binary mask from the U-Net's
         output. Pixels with values above this threshold in the U-Net output
         will be set to 1 in the binary mask, and others to 0. Default is 0.5.
-    clipping : list of floats, optional
-        Min and Max values for the np.clip option which applies clipping for 
-        the standardization of image intensities. Default is min=0.5 and max=99.5.
 
     Returns:
     --------
@@ -114,13 +63,11 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
 
         return img_arr_cropped.astype(np.float32), [difference_0_l,difference_0_r,difference_1_l,difference_1_r,difference_2_l,difference_2_r]
 
-    def preprocess_intensities(img_arr, clipping):
+    def preprocess_intensities(img_arr):
         #Standardize image intensities to [0;1]
         temp_bm = np.zeros(img_arr.shape)
         temp_bm[img_arr != 0] = 1
-        img_arr = np.clip(img_arr, 
-                          a_min=np.percentile(img_arr[temp_bm != 0],clipping[0]),
-                          a_max=np.percentile(img_arr[temp_bm != 0],clipping[1]) )
+        img_arr = np.clip(img_arr, np.percentile(img_arr[temp_bm != 0],0.5),np.percentile(img_arr[temp_bm != 0],99.5) )
         img_arr -= img_arr[temp_bm == 1].min()
         img_arr = img_arr / img_arr[temp_bm == 1].max()
         img_arr *= temp_bm
@@ -138,20 +85,16 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
     # Load and preprocess images
     t1_nib = nib.load(mni_t1)
     t1 = t1_nib.get_fdata()
-    flair_nib = nib.load(mni_flair)
-    flair = flair_nib.get_fdata()
+    flair = nib.load(mni_flair).get_fdata()
 
     t1, shape_lst = adapt_shape(t1)
     flair, _ = adapt_shape(flair)
 
-    t1 = preprocess_intensities(t1, clipping)
-    flair = preprocess_intensities(flair, clipping)
+    t1 = preprocess_intensities(t1)
+    flair = preprocess_intensities(flair)
 
     joint_seg = np.zeros(t1.shape)
     print(f"Running segmentation on {tf_device}.")
-
-    # define list of model probability maps
-    output_prob_list = [output_prob1_path, output_prob2_path, output_prob3_path]
 
     for i, model in enumerate(unet_mdls):
         with tf.device(tf_device):
@@ -164,31 +107,12 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
             out_seg = mdl(img_image)[0]  # Will return a len(2) list of [out_seg, out_ds]
         out_seg = np.squeeze(out_seg)
 
-        if probmap:
-            # add zero values to the probability map
-            out_seg_pad = np.pad(out_seg,
-                                 ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
-                                 'constant', constant_values=0.)
-            # save the probability map
-            nib.save(nib.Nifti1Image(out_seg_pad.astype(np.float32),
-                                    flair_nib.affine,
-                                    flair_nib.header),
-                                    output_prob_list[i])
+        out_binary = np.zeros(t1.shape)
+        out_binary[out_seg > threshold] = 1
 
         joint_seg += out_seg
 
     joint_seg /= len(unet_mdls)
-
-    if probmap:
-        # add zero values to the probability map
-        joint_seg_pad = np.pad(joint_seg,
-                               ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
-                               'constant', constant_values=0.0)
-        # save the probability map
-        nib.save(nib.Nifti1Image(joint_seg_pad.astype(np.float32),
-                                flair_nib.affine,
-                                flair_nib.header),
-                                output_prob_path)
 
     out_binary = np.zeros(t1.shape)
     out_binary[joint_seg > threshold] = 1
@@ -198,12 +122,9 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
         'constant', constant_values=0.
     )
-
-    out_binary = remove_small_objects(out_binary, flair_nib.header.get_zooms(), unit="mm3", thr=int(lesion_thr))
-
     nib.save(nib.Nifti1Image(out_binary.astype(np.uint8),
-                             flair_nib.affine,
-                             flair_nib.header),
+                             t1_nib.affine,
+                             t1_nib.header),
                              output_segmentation_path)
 
 
