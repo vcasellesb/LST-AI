@@ -20,7 +20,7 @@ from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
 from LST_AI.stats import compute_stats
-from LST_AI.utils import maybe_download_data, MODELS_PATH
+from LST_AI.utils import maybe_download_data, ATLAS_DIR, MODELS_DIR
 
 if __name__ == "__main__":
 
@@ -199,15 +199,12 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(__file__)
 
     # atlas files
-    t1w_atlas = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1.nii.gz")
-    t1w_atlas_stripped = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
-    atlas_mask = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
+    t1w_atlas = os.path.join(ATLAS_DIR, "sub-mni152_space-mni_t1.nii.gz")
+    t1w_atlas_stripped = os.path.join(ATLAS_DIR, "sub-mni152_space-mni_t1bet.nii.gz")
+    atlas_mask = os.path.join(ATLAS_DIR, "sub-mni152_space-mni_msmask.nii.gz")
     atlas_t1 = t1w_atlas
     atlas_warp = os.path.join(work_dir, "atlas_warp_field.nii.gz")
     atlas_mask_warped = os.path.join(work_dir,"atlas_mask_warped.nii.gz")
-
-    # model weights
-    model_directory = os.path.join(parent_dir, 'model')
 
     # make output path (in case it does not exist)
     if not os.path.exists(args.output):
@@ -353,7 +350,7 @@ if __name__ == "__main__":
         print("Running LST Segmentation.")
         unet_segmentation(mni_t1=path_mni_stripped_t1w,
                           mni_flair=path_mni_stripped_flair,
-                          model_path=model_directory,
+                          model_path=MODELS_DIR,
                           output_segmentation_path=path_mni_segmentation,
                           device=args.device,
                           probmap=args.probability_map,

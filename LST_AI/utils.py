@@ -3,7 +3,7 @@ import os
 import zipfile
 from urllib import request
 
-MODELS_PATH = os.path.dirname(__file__)
+from LST_AI.config import LST_AI_DIR, ATLAS_DIR, MODELS_DIR, BINARIES_DIR
 
 def maybe_download_data():
     """
@@ -12,13 +12,9 @@ def maybe_download_data():
     url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip"
 
     target_path = "lst_data.zip"
-    extract_path = MODELS_PATH  # This is the base directory.
+    extract_path = LST_AI_DIR  # This is the base directory.
 
-    atlas_path = os.path.join(extract_path, 'atlas')
-    binary_path = os.path.join(extract_path, 'binaries')
-    model_path = os.path.join(extract_path, 'model')
-
-    paths_to_check = [atlas_path, binary_path, model_path]
+    paths_to_check = [ATLAS_DIR, MODELS_DIR, BINARIES_DIR]
 
     # Check if all paths exist.
     if not all(os.path.exists(path) for path in paths_to_check):
