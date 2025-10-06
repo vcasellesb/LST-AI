@@ -15,11 +15,11 @@ setup(
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
     python_requires='>=3.8',
     install_requires=[
-        'numpy',
+        'numpy==1.26.4',
         'pillow',
         'scipy>=1.9.0',
         'scikit-image>=0.21.0',
-        'tensorflow>=2.13',
+        'tensorflow==2.12.1,',
         'nibabel',
         'requests'
     ],
