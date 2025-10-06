@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(f"Looking for model weights in {MODELS_PATH}.")
+    print(f"Looking for model weights in {MODELS_DIR}.")
     maybe_download_data()
 
     # Sanity Checks
