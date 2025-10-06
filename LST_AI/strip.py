@@ -20,7 +20,7 @@ def run_hdbet(input_image, output_image, device, mode: str = "accurate", disable
     and device, it executes the appropriate command.
     """
 
-    bet_call = f"hd-bet -i {input_image} -device {device} -o {output_image}"
+    bet_call = f"hd-bet -i {input_image} -device {device} -o {output_image} --save_bet_mask"
 
     if disable_tta:
         bet_call += ' --disable_tta'

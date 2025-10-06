@@ -315,7 +315,10 @@ if __name__ == "__main__":
 
             # move processed mask to correct naming convention
             hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
-            shutil.move(hdbet_mask, path_mni_brainmask)
+            try:
+                shutil.move(hdbet_mask, path_mni_brainmask)
+            except FileNotFoundError:
+                shutil.move(path_mni_stripped_t1w.replace(".nii.gz", "_bet.nii.gz"), path_mni_brainmask)
 
             # then apply brain mask to FLAIR
             apply_mask(input_image=path_mni_flair,

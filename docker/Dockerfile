@@ -77,10 +77,7 @@ RUN mkdir -p /custom_apps/lst_directory && \
     cd /custom_apps/lst_directory && \
     git clone --depth 1 https://github.com/MIC-DKFZ/HD-BET && \
     pip install --no-cache-dir -e HD-BET && \
-    mkdir -p /root/hd-bet_params && \
-    wget -O /root/hd-bet_params/data.zip https://zenodo.org/api/records/2540695/files-archive && \
-    unzip /root/hd-bet_params/data.zip && \
-    rm /root/hd-bet_params/data.zip
+    python3 -c "import HD_BET.checkpoint_download as chk; chk.maybe_download_parameters()"
     # in the Readme they do: git checkout ae160681324d524db3578e4135bf781f8206e146 prior to install HD-BET...
 
 
