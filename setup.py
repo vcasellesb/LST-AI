@@ -13,15 +13,16 @@ setup(
         'benedict.wiestler@tum.de'
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
-    python_requires='>=3.8',
+    python_requires='>=3.8,<3.11',
     install_requires=[
-        'numpy==1.26.4',
-        'pillow',
-        'scipy>=1.9.0',
-        'scikit-image>=0.21.0',
-        'tensorflow==2.12.1,',
         'nibabel',
-        'requests'
+        'numpy',
+        'pillow',
+        'requests',
+        'scikit-image',
+        'scipy',
+        'tensorflow',
+        'torch'
     ],
     scripts=['LST_AI/lst'],
     license='MIT',

@@ -3,7 +3,7 @@ import os
 import zipfile
 from urllib import request
 
-from LST_AI.config import LST_AI_DIR, ATLAS_DIR, MODELS_DIR, BINARIES_DIR
+from LST_AI.config import LST_DATA_DIR, ATLAS_DIR, MODELS_DIR, BINARIES_DIR
 
 def maybe_download_data():
     """
@@ -12,7 +12,7 @@ def maybe_download_data():
     url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip"
 
     target_path = "lst_data.zip"
-    extract_path = LST_AI_DIR  # This is the base directory.
+    extract_path = LST_DATA_DIR  # This is the base directory.
 
     paths_to_check = [ATLAS_DIR, MODELS_DIR, BINARIES_DIR]
 
