@@ -28,9 +28,6 @@ RUN apt-get update && \
     libtiff-dev \
     libvtkgdcm-dev \
     software-properties-common && \
-    pip install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --upgrade requests && \
-    pip3 install --no-cache-dir tensorflow==2.12.1 && \
     rm -rf /var/lib/apt/lists/* && \
     wget -O /app/data.zip https://github.com/CompImg/LST-AI/releases/download/v1.1.0/lst_data.zip && \
     unzip /app/data.zip -d /app/LST_data && \
@@ -79,18 +76,21 @@ RUN git clone https://github.com/pyushkevich/greedy /greedy && \
     cd / && \
     rm -r /greedy
 
-# Install HD-BET
-RUN pip install --no-cache-dir \
+# Install HD-BET and LST_AI
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    tensorflow==2.12.1 \
+    requests \
     torch==2.1.2 \
     nnunetv2==2.5.1 \
     acvl_utils==0.2 \
     typing-extensions==4.5.0 && \
     git clone --depth 1 https://github.com/MIC-DKFZ/HD-BET && \
     pip install --no-cache-dir -e HD-BET && \
-    python3 -c "import HD_BET.checkpoint_download as chk; chk.maybe_download_parameters()"
-
-COPY . /app/LST-AI
-RUN cd /app/LST-AI && \
+    python3 -c "import HD_BET.checkpoint_download as chk; chk.maybe_download_parameters()" && \
+    git clone --depth 1 https://github.com/vcasellesb/LST-AI.git && \
+    cd /app/LST-AI && \
     pip install --no-cache-dir -e .
+
 # Entrypoint to run the python script when the container starts
 ENTRYPOINT [ "lst" ]
