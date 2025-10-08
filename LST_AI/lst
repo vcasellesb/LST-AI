@@ -23,8 +23,7 @@ from LST_AI.stats import compute_stats
 from LST_AI.utils import maybe_download_data, ATLAS_DIR, MODELS_DIR
 
 
-if __name__ == "__main__":
-
+def print_citation() -> None:
     print("###########################\n")
     print("Thank you for using LST-AI. If you publish your results, please cite our paper:")
     print("Wiltgen T, McGinnis J, Schlaeger S, Kofler F, Voon C, Berthele A, Bischl D, Grundl L, Will N, Metz M, Schinz D, "
@@ -33,6 +32,8 @@ if __name__ == "__main__":
           "https://doi.org/10.1016/j.nicl.2024.103611.")
     print("###########################\n")
 
+
+def lst_entrypoint():
     parser = argparse.ArgumentParser(description='Segment / Label MS lesions according to McDonald criteria.')
 
     # Input Images
@@ -48,57 +49,46 @@ if __name__ == "__main__":
                         required=True)
     # Output Images
     parser.add_argument('--output',
-                        dest='output',
                         help='Path to output segmentation nifti path.',
                         type=str,
                         required=True)
 
     parser.add_argument('--existing_seg',
-                        dest='existing_seg',
-                        default='',
                         help='Path to output segmentation image (will be saved in FLAIR space)',
                         type=str)
 
     # Temporary directory
     parser.add_argument('--temp',
-                        dest='temp',
-                        default='',
                         help='Path to temp directory.',
                         type=str)
 
     # Mode (segment only, annotate only, segment+annotate (default))
     parser.add_argument('--segment_only',
                         action='store_true',
-                        dest='segment_only',
                         help='Only perform the segmentation, and skip lesion annotation.')
 
     parser.add_argument('--annotate_only',
                         action='store_true',
-                        dest='annotate_only',
                         help='Only annotate lesion files without segmentation of lesions.')
 
     parser.add_argument('--stripped',
                         action='store_true',
-                        dest='stripped',
                         help='Images are already skull stripped. Skip skull-stripping.')
 
     # Model Settings
     parser.add_argument('--threshold',
-                        dest='threshold',
                         help='Threshold for binarizing the joint segmentation (default: 0.5)',
                         type=float,
                         default=0.5)
-    
+
     parser.add_argument('--lesion_threshold',
-                        dest='lesion_threshold',
                         help='minimum lesion size',
                         type=int,
                         default=0)
-        
+
     parser.add_argument('--clipping',
-                        dest='clipping',
                         help='Clipping (min & max) for standardization of image intensities (default: 0.5 99.5).',
-                        nargs='+',
+                        nargs=2,
                         type=str,
                         default=('0.5','99.5'))
 
@@ -109,24 +99,28 @@ if __name__ == "__main__":
     
     parser.add_argument('--probability_map',
                         action='store_true',
-                        dest='probability_map',
                         help='Additionally store the probability maps of the three models and of the ensemble network.',
                         default=False)
 
     # Computing Resources
     parser.add_argument('--device',
-                        dest='device',
                         help='Either int for GPU ID or "cpu" for CPU (default: 0)',
                         type=str,
                         default='0')
 
     parser.add_argument('--threads',
-                        dest='threads',
                         help='Number of threads to be used for registration (default: all available)',
                         type=int,
-                        default=multiprocessing.cpu_count())
+                        default=multiprocessing.cpu_count() // 2)
 
     args = parser.parse_args()
+    return args
+
+if __name__ == "__main__":
+
+    print_citation()
+
+    args = lst_entrypoint()
 
     print(f"Looking for model weights in {MODELS_DIR}.")
     maybe_download_data()
@@ -134,21 +128,18 @@ if __name__ == "__main__":
     # Sanity Checks
     assert os.path.exists(args.t1), 'LST.AI aborted. T1w Image Path does not exist.'
     assert os.path.exists(args.flair), 'LST.AI aborted. Flair Image Path does not exist.'
-    assert str(args.t1).endswith(".nii.gz"), 'Please provide T1w as a zipped nifti.'
-    assert str(args.flair).endswith(".nii.gz"), 'Please provide FLAIR as a zipped nifti.'
-    assert not os.path.isfile(args.output), 'Please provide an output path, not a filename.'
-    assert len(args.clipping)==2, 'Please provide two values for clipping (min & max).'
+    assert args.t1.endswith(".nii.gz"), 'Please provide T1w as a zipped nifti.'
+    assert args.flair.endswith(".nii.gz"), 'Please provide FLAIR as a zipped nifti.'
+    assert not args.output.endswith(('.nii.gz', '.nii')), 'Please provide an output path, not a filename.'
 
     # convert input
-    min_clip, max_clip = float(args.clipping[0]), float(args.clipping[1])
+    min_clip, max_clip = map(float, args.clipping)
 
-    if not args.temp:
-        work_dir = tempfile.mkdtemp(prefix='lst_ai_')
-    else:
-        work_dir = os.path.abspath(args.temp)
-        # make temp directory in case it does not exist
-        if not os.path.exists(work_dir):
-            os.makedirs(work_dir)
+    work_dir = args.temp or tempfile.mkdtemp(prefix='lst_ai_')
+    work_dir = os.path.abspath(work_dir)
+    # make temp directory in case it does not exist
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir)
 
     #  Define Image Paths (original space)
     path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w.nii.gz')
@@ -206,7 +197,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    if os.path.isfile(args.existing_seg) and not args.annotate_only:
+    if args.existing_seg is not None and os.path.isfile(args.existing_seg) and not args.annotate_only:
         print("Existing segmentation may only be used with --annotate_only flag.")
         print("Aborted.")
         sys.exit(1)
@@ -235,11 +226,8 @@ if __name__ == "__main__":
                       destination=path_org_t1w,
                       n_threads=args.threads)
 
-            # strip only T1w
-            if args.fast:
-                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="fast")
-            else:
-                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="accurate")
+            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device,
+                      mode="fast" if args.fast else "accurate")
 
             # move processed mask to correct naming convention
             hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
@@ -264,11 +252,8 @@ if __name__ == "__main__":
                          seg_native=path_orig_segmentation,
                          out_atlas_warp=atlas_warp,
                          out_atlas_mask_warped=atlas_mask_warped,
-                         out_annotated_native=path_orig_annotated_segmentation,
+                         out_annotated_native=os.path.join(args.output, filename_output_annotated_segmentation),
                          n_threads=args.threads)
-
-        shutil.copy(path_orig_annotated_segmentation,
-                    os.path.join(args.output, filename_output_annotated_segmentation))
 
 
     # Segmentation only + (opt. Annotation)
@@ -304,10 +289,8 @@ if __name__ == "__main__":
                              n_threads=args.threads)
 
             # then skull strip T1w
-            if args.fast:
-                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="fast")
-            else:
-                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="accurate")
+            run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device,
+                      mode="fast" if args.fast else 'accurate')
 
             # move processed mask to correct naming convention
             hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
@@ -393,13 +376,11 @@ if __name__ == "__main__":
         # for now, we do not threshold the lesion sizes of the warped native image
         apply_warp_label(image_org_space=path_org_stripped_flair,
                          affine=path_affine_mni_flair,
-                         target=path_orig_segmentation,
+                         target=os.path.join(args.output, filename_output_segmentation),
                          origin=path_mni_segmentation,
                          reverse=True,
                          n_threads=args.threads)
 
-        # store the segmentations
-        shutil.copy(path_orig_segmentation, os.path.join(args.output, filename_output_segmentation))
 
         # Annotation
         if not args.segment_only:
@@ -416,12 +397,9 @@ if __name__ == "__main__":
             apply_warp_label(image_org_space=path_org_stripped_flair,
                              affine=path_affine_mni_flair,
                              origin=path_mni_annotated_segmentation,
-                             target=path_orig_annotated_segmentation,
+                             target=os.path.join(args.output, filename_output_annotated_segmentation),
                              reverse=True,
                              n_threads=args.threads)
-
-            # store the segmentations
-            shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, filename_output_annotated_segmentation))
 
     # Compute Stats of (annotated) segmentation if they exist
     if os.path.exists(path_orig_segmentation):
@@ -434,5 +412,9 @@ if __name__ == "__main__":
                       output_file=os.path.join(args.output, filename_output_stats_annotated_segmentation),
                       multi_class=True)
 
-    print(f"Results in {work_dir}")
+    if not args.temp:
+        print(f"Deleting temporary directory: {work_dir}")
+        shutil.rmtree(work_dir)
+
+    print(f"Results in {args.output}")
     print("Done.")
