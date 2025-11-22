@@ -145,7 +145,6 @@ if __name__ == "__main__":
     path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w.nii.gz')
     path_org_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_FLAIR.nii.gz')
     path_org_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_desc-stripped_T1w.nii.gz')
-    path_org_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_desc-stripped_FLAIR.nii.gz')
 
     #  Define Image Paths (MNI space)
     path_mni_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_T1w.nii.gz')
@@ -304,30 +303,6 @@ if __name__ == "__main__":
                        mask=path_mni_brainmask,
                        output_image=path_mni_stripped_flair)
 
-            # create masked images in original space
-            apply_warp_label(image_org_space=path_org_t1w,
-                             affine=path_affine_mni_t1w,
-                             origin=path_mni_brainmask,
-                             target=path_orig_brainmask_t1w,
-                             reverse=True,
-                             n_threads=args.threads)
-
-            apply_warp_label(image_org_space=path_org_flair,
-                             affine=path_affine_mni_flair,
-                             origin=path_mni_brainmask,
-                             target=path_orig_brainmask_flair,
-                             reverse=True,
-                             n_threads=args.threads)
-
-            apply_mask(input_image=path_org_t1w,
-                       mask=path_orig_brainmask_t1w,
-                       output_image=path_org_stripped_t1w)
-
-            apply_mask(input_image=path_org_flair,
-                       mask=path_orig_brainmask_flair,
-                       output_image=path_org_stripped_flair)
-
-
         # Segmentation
         print("Running LST Segmentation.")
         unet_segmentation(mni_t1=path_mni_stripped_t1w,
@@ -374,7 +349,7 @@ if __name__ == "__main__":
 
         # warp segmentation back to original FLAIR space
         # for now, we do not threshold the lesion sizes of the warped native image
-        apply_warp_label(image_org_space=path_org_stripped_flair,
+        apply_warp_label(image_org_space=path_org_flair,
                          affine=path_affine_mni_flair,
                          target=os.path.join(args.output, filename_output_segmentation),
                          origin=path_mni_segmentation,
@@ -394,7 +369,7 @@ if __name__ == "__main__":
                              n_threads=args.threads)
 
             # warp results back to original FLAIR space
-            apply_warp_label(image_org_space=path_org_stripped_flair,
+            apply_warp_label(image_org_space=path_org_flair,
                              affine=path_affine_mni_flair,
                              origin=path_mni_annotated_segmentation,
                              target=os.path.join(args.output, filename_output_annotated_segmentation),
