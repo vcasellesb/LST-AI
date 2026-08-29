@@ -90,6 +90,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     python3 -c "import HD_BET.checkpoint_download as chk; chk.maybe_download_parameters()" && \
     git clone --depth 1 https://github.com/vcasellesb/LST-AI.git && \
     cd /app/LST-AI && \
+    git branch dev && \
     pip install --no-cache-dir -e .
 
 # Entrypoint to run the python script when the container starts

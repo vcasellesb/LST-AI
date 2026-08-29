@@ -75,6 +75,9 @@ def lst_entrypoint():
                         action='store_true',
                         help='Images are already skull stripped. Skip skull-stripping.')
 
+    parser.add_argument('--registered_to_mni',
+                        action='store_true', help='Images are already registered to MNI. Skips registration.')
+
     # Model Settings
     parser.add_argument('--threshold',
                         help='Threshold for binarizing the joint segmentation (default: 0.5)',
@@ -96,7 +99,7 @@ def lst_entrypoint():
                         action='store_true',
                         dest='fast',
                         help='Only use one model for hd-bet.')
-    
+
     parser.add_argument('--probability_map',
                         action='store_true',
                         help='Additionally store the probability maps of the three models and of the ensemble network.',
@@ -107,6 +110,8 @@ def lst_entrypoint():
                         help='Either int for GPU ID or "cpu" for CPU (default: 0)',
                         type=str,
                         default='0')
+
+    parser.add_argument('--hd_bet_device')
 
     parser.add_argument('--threads',
                         help='Number of threads to be used for registration (default: all available)',
@@ -145,6 +150,7 @@ if __name__ == "__main__":
     path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w.nii.gz')
     path_org_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_FLAIR.nii.gz')
     path_org_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_desc-stripped_T1w.nii.gz')
+    path_org_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_desc-stripped_FLAIR.nii.gz')
 
     #  Define Image Paths (MNI space)
     path_mni_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_T1w.nii.gz')
@@ -219,30 +225,31 @@ if __name__ == "__main__":
         if not args.stripped:
 
             shutil.copy(args.flair, path_org_flair)
-            rigid_reg(moving=t1w_native,
-                      fixed=path_org_flair,
-                      affine=native_affine,
-                      destination=path_org_t1w,
-                      n_threads=args.threads)
+            if not args.registered_to_mni:
+                rigid_reg(moving=t1w_native,
+                          fixed=path_org_flair,
+                          affine=native_affine,
+                          destination=path_org_t1w,
+                          n_threads=args.threads)
+            else:
+                shutil.copy(t1w_native, path_org_t1w)
 
-            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device,
+            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.hd_bet_device or args.device,
                       mode="fast" if args.fast else "accurate")
 
             # move processed mask to correct naming convention
             hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
             shutil.move(hdbet_mask, path_orig_brainmask_flair)
 
-            # apply brain mask to FLAIR
-            apply_mask(input_image=path_org_flair,
-                       mask=path_orig_brainmask_flair,
-                       output_image=path_org_stripped_flair)
         else:
-            shutil.copy(args.flair, path_org_stripped_flair)
-            rigid_reg(moving=t1w_native,
-                      fixed=path_org_stripped_flair,
-                      affine=native_affine,
-                      destination=path_org_stripped_t1w,
-                      n_threads=args.threads)
+            if not args.registered_to_mni:
+                rigid_reg(moving=t1w_native,
+                          fixed=path_org_flair,
+                          affine=native_affine,
+                          destination=path_org_stripped_t1w,
+                          n_threads=args.threads)
+            else:
+                shutil.copy(t1w_native, path_org_stripped_t1w)
 
 
         annotate_lesions(atlas_t1=t1w_atlas,
@@ -263,14 +270,18 @@ if __name__ == "__main__":
             shutil.copy(args.t1, path_org_stripped_t1w)
             shutil.copy(args.flair, path_org_stripped_flair)
 
-            mni_registration(t1w_atlas_stripped,
-                             path_org_stripped_t1w,
-                             path_org_stripped_flair,
-                             path_mni_stripped_t1w,
-                             path_mni_stripped_flair,
-                             path_affine_mni_t1w,
-                             path_affine_mni_flair,
-                             n_threads=args.threads)
+            if args.registered_to_mni:
+                path_mni_stripped_t1w = path_org_stripped_t1w
+                path_mni_stripped_flair = path_org_stripped_flair
+            else:
+                mni_registration(t1w_atlas_stripped,
+                                 path_org_stripped_t1w,
+                                 path_org_stripped_flair,
+                                 path_mni_stripped_t1w,
+                                 path_mni_stripped_flair,
+                                 path_affine_mni_t1w,
+                                 path_affine_mni_flair,
+                                 n_threads=args.threads)
 
         else:
             print("Images need to be skull-stripped. Processing with HD-BET.")
@@ -278,17 +289,21 @@ if __name__ == "__main__":
             shutil.copy(args.flair, path_org_flair)
 
             # first register to MNI space
-            mni_registration(t1w_atlas,
-                             path_org_t1w,
-                             path_org_flair,
-                             path_mni_t1w,
-                             path_mni_flair,
-                             path_affine_mni_t1w,
-                             path_affine_mni_flair,
-                             n_threads=args.threads)
+            if args.registered_to_mni:
+                path_mni_t1w = path_org_t1w
+                path_mni_flair = path_org_flair
+            else:
+                mni_registration(t1w_atlas,
+                                 path_org_t1w,
+                                 path_org_flair,
+                                 path_mni_t1w,
+                                 path_mni_flair,
+                                 path_affine_mni_t1w,
+                                 path_affine_mni_flair,
+                                 n_threads=args.threads)
 
             # then skull strip T1w
-            run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device,
+            run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.hd_bet_device or args.device,
                       mode="fast" if args.fast else 'accurate')
 
             # move processed mask to correct naming convention
@@ -319,28 +334,28 @@ if __name__ == "__main__":
                           threshold=args.threshold,
                           clipping=(min_clip, max_clip),
                           lesion_thr=int(args.lesion_threshold))
-        
+
         # warp probability maps to FLAIR space if flag is set
-        if args.probability_map:
-            apply_warp_interp(image_org_space=path_org_stripped_flair,
+        if args.probability_map and not args.registered_to_mni:
+            apply_warp_interp(image_org_space=path_org_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_segmentation,
                               target=probmap_FLAIR_segmentation,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_stripped_flair,
+            apply_warp_interp(image_org_space=path_org_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model1,
                               target=probmap_FLAIR_model1,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_stripped_flair,
+            apply_warp_interp(image_org_space=path_org_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model2,
                               target=probmap_FLAIR_model2,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_stripped_flair,
+            apply_warp_interp(image_org_space=path_org_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model3,
                               target=probmap_FLAIR_model3,
@@ -349,12 +364,15 @@ if __name__ == "__main__":
 
         # warp segmentation back to original FLAIR space
         # for now, we do not threshold the lesion sizes of the warped native image
-        apply_warp_label(image_org_space=path_org_flair,
-                         affine=path_affine_mni_flair,
-                         target=os.path.join(args.output, filename_output_segmentation),
-                         origin=path_mni_segmentation,
-                         reverse=True,
-                         n_threads=args.threads)
+        if not args.registered_to_mni:
+            apply_warp_label(image_org_space=path_org_flair,
+                            affine=path_affine_mni_flair,
+                            target=os.path.join(args.output, filename_output_segmentation),
+                            origin=path_mni_segmentation,
+                            reverse=True,
+                            n_threads=args.threads)
+        else:
+            shutil.copy(path_mni_segmentation, os.path.join(args.output, filename_output_segmentation))
 
 
         # Annotation
@@ -368,13 +386,15 @@ if __name__ == "__main__":
                              out_annotated_native=path_mni_annotated_segmentation,
                              n_threads=args.threads)
 
-            # warp results back to original FLAIR space
-            apply_warp_label(image_org_space=path_org_flair,
-                             affine=path_affine_mni_flair,
-                             origin=path_mni_annotated_segmentation,
-                             target=os.path.join(args.output, filename_output_annotated_segmentation),
-                             reverse=True,
-                             n_threads=args.threads)
+            if not args.registered_to_mni:
+                apply_warp_label(image_org_space=path_org_flair,
+                                 affine=path_affine_mni_flair,
+                                 origin=path_mni_annotated_segmentation,
+                                 target=os.path.join(args.output, filename_output_annotated_segmentation),
+                                 reverse=True,
+                                 n_threads=args.threads)
+            else:
+                shutil.copy(path_mni_annotated_segmentation, os.path.join(args.output, filename_output_annotated_segmentation))
 
     # Compute Stats of (annotated) segmentation if they exist
     if os.path.exists(path_orig_segmentation):

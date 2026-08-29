@@ -144,6 +144,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
     t1, shape_lst = adapt_shape(t1)
     flair, _ = adapt_shape(flair)
 
+    # print(f"Original T1 max: {np.max(t1_nib.get_fdata())}")
+    # print(f"Cropped T1 max: {np.max(t1)}")
     t1 = preprocess_intensities(t1, clipping)
     flair = preprocess_intensities(flair, clipping)
 
