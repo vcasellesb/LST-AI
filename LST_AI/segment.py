@@ -116,14 +116,18 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
 
     def preprocess_intensities(img_arr, clipping):
         #Standardize image intensities to [0;1]
-        temp_bm = np.zeros(img_arr.shape)
-        temp_bm[img_arr != 0] = 1
-        img_arr = np.clip(img_arr, 
-                          a_min=np.percentile(img_arr[temp_bm != 0],clipping[0]),
-                          a_max=np.percentile(img_arr[temp_bm != 0],clipping[1]) )
-        img_arr -= img_arr[temp_bm == 1].min()
-        img_arr = img_arr / img_arr[temp_bm == 1].max()
-        img_arr *= temp_bm
+        mask = img_arr != 0
+
+        if mask.any():
+            this_data = img_arr[mask]
+            np.clip(img_arr,
+                    a_min=np.percentile(this_data, clipping[0]),
+                    a_max=np.percentile(this_data, clipping[1]),
+                    out=img_arr)
+
+            img_arr -= np.min(img_arr, where=mask, initial=np.inf)
+            img_arr /= np.max(img_arr, where=mask, initial=-np.inf)
+            img_arr *= mask
 
         return img_arr.astype(np.float32)
 
