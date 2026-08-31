@@ -198,6 +198,12 @@ if __name__ == "__main__":
     atlas_warp = os.path.join(work_dir, "atlas_warp_field.nii.gz")
     atlas_mask_warped = os.path.join(work_dir,"atlas_mask_warped.nii.gz")
 
+    reference_flair = (
+        path_org_stripped_flair
+        if args.stripped
+        else path_org_flair
+    )
+
     # make output path (in case it does not exist)
     if not os.path.exists(args.output):
         os.makedirs(args.output)
@@ -218,8 +224,8 @@ if __name__ == "__main__":
             sys.exit(1)
 
         # Register T1w to FLAIR native
-        t1w_native= os.path.join(work_dir,"T1w.nii.gz")
-        native_affine = os.path.join(work_dir,"affine_native_t1_flair.mat")
+        t1w_native= os.path.join(work_dir, "T1w.nii.gz")
+        native_affine = os.path.join(work_dir, "affine_native_t1_flair.mat")
         shutil.copy(args.t1, t1w_native)
 
         if not args.stripped:
@@ -337,25 +343,25 @@ if __name__ == "__main__":
 
         # warp probability maps to FLAIR space if flag is set
         if args.probability_map and not args.registered_to_mni:
-            apply_warp_interp(image_org_space=path_org_flair,
+            apply_warp_interp(image_org_space=reference_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_segmentation,
                               target=probmap_FLAIR_segmentation,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_flair,
+            apply_warp_interp(image_org_space=reference_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model1,
                               target=probmap_FLAIR_model1,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_flair,
+            apply_warp_interp(image_org_space=reference_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model2,
                               target=probmap_FLAIR_model2,
                               reverse=True,
                               n_threads=args.threads)
-            apply_warp_interp(image_org_space=path_org_flair,
+            apply_warp_interp(image_org_space=reference_flair,
                               affine=path_affine_mni_flair,
                               origin=probmap_mni_model3,
                               target=probmap_FLAIR_model3,
@@ -365,12 +371,12 @@ if __name__ == "__main__":
         # warp segmentation back to original FLAIR space
         # for now, we do not threshold the lesion sizes of the warped native image
         if not args.registered_to_mni:
-            apply_warp_label(image_org_space=path_org_flair,
-                            affine=path_affine_mni_flair,
-                            target=os.path.join(args.output, filename_output_segmentation),
-                            origin=path_mni_segmentation,
-                            reverse=True,
-                            n_threads=args.threads)
+            apply_warp_label(image_org_space=reference_flair,
+                             affine=path_affine_mni_flair,
+                             target=os.path.join(args.output, filename_output_segmentation),
+                             origin=path_mni_segmentation,
+                             reverse=True,
+                             n_threads=args.threads)
         else:
             shutil.copy(path_mni_segmentation, os.path.join(args.output, filename_output_segmentation))
 
@@ -387,7 +393,7 @@ if __name__ == "__main__":
                              n_threads=args.threads)
 
             if not args.registered_to_mni:
-                apply_warp_label(image_org_space=path_org_flair,
+                apply_warp_label(image_org_space=reference_flair,
                                  affine=path_affine_mni_flair,
                                  origin=path_mni_annotated_segmentation,
                                  target=os.path.join(args.output, filename_output_annotated_segmentation),
